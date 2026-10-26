@@ -83,6 +83,7 @@ from strawberry.types.private import is_private
 from strawberry_sqlalchemy_mapper.exc import (
     HybridPropertyNotAnnotated,
     InterfaceModelNotPolymorphic,
+    MissingSQLAlchemyLoaderError,
     UnsupportedAssociationProxyTarget,
     UnsupportedColumnType,
     UnsupportedDescriptorType,
@@ -132,10 +133,17 @@ class StrawberrySQLAlchemyLazy(LazyType):
 
 def _get_loader_from_info(info: Info) -> StrawberrySQLAlchemyLoader:
     """Extracts the sqlalchemy loader from info."""
-    if isinstance(info.context, dict):
-        return cast("StrawberrySQLAlchemyLoader", info.context["sqlalchemy_loader"])
-    else:
-        return cast("StrawberrySQLAlchemyLoader", info.context.sqlalchemy_loader)
+    loader = None
+    if info.context is not None:
+        if isinstance(info.context, dict):
+            loader = info.context.get("sqlalchemy_loader")
+        else:
+            loader = getattr(info.context, "sqlalchemy_loader", None)
+
+    if loader is None:
+        raise MissingSQLAlchemyLoaderError()
+
+    return cast("StrawberrySQLAlchemyLoader", loader)
 
 
 def _get_relationship_key(model: object, relationship: RelationshipProperty) -> Tuple[str, ...]:

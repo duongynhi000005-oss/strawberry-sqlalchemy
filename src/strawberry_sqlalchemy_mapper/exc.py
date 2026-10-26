@@ -35,3 +35,12 @@ class InterfaceModelNotPolymorphic(Exception):
             f"Model `{model}` is not polymorphic or is not the base model of its "
             "inheritance chain, and thus cannot be used as an interface."
         )
+
+
+class MissingSQLAlchemyLoaderError(Exception):
+    def __init__(self) -> None:
+        super().__init__(
+            "The GraphQL context is missing a required 'sqlalchemy_loader' of type "
+            "StrawberrySQLAlchemyLoader. Please ensure 'sqlalchemy_loader' is included "
+            "in your context configuration."
+        )

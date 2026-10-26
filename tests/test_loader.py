@@ -274,3 +274,57 @@ async def test_loader_for_pagination_invalid(engine, base, sessionmaker, many_to
             await last_after_loader.load((d1.id,))
         with pytest.raises(ValueError, match="Cannot provide"):
             await last_after_loader.load((d_empty.id,))
+
+
+def test_get_loader_from_info_missing_loader():
+    from unittest.mock import Mock
+
+    err_msg = "missing a required 'sqlalchemy_loader'"
+
+    from strawberry_sqlalchemy_mapper import (
+        MissingSQLAlchemyLoaderError,
+        StrawberrySQLAlchemyLoader,
+    )
+    from strawberry_sqlalchemy_mapper.mapper import _get_loader_from_info
+
+    # 1. Context is None
+    info_none = Mock()
+    info_none.context = None
+    with pytest.raises(MissingSQLAlchemyLoaderError, match=err_msg):
+        _get_loader_from_info(info_none)
+
+    # 2. Context is an empty dict
+    info_dict_empty = Mock()
+    info_dict_empty.context = {}
+    with pytest.raises(MissingSQLAlchemyLoaderError, match=err_msg):
+        _get_loader_from_info(info_dict_empty)
+
+    # 3. Context is an object without the attribute
+    class CustomContext:
+        pass
+
+    info_obj_missing = Mock()
+    info_obj_missing.context = CustomContext()
+    with pytest.raises(MissingSQLAlchemyLoaderError, match=err_msg):
+        _get_loader_from_info(info_obj_missing)
+
+    # 4. Context has sqlalchemy_loader explicitly set to None
+    info_dict_none = Mock()
+    info_dict_none.context = {"sqlalchemy_loader": None}
+    with pytest.raises(MissingSQLAlchemyLoaderError, match=err_msg):
+        _get_loader_from_info(info_dict_none)
+
+    # 5. Success case with dict context
+    dummy_loader = Mock(spec=StrawberrySQLAlchemyLoader)
+    info_dict_valid = Mock()
+    info_dict_valid.context = {"sqlalchemy_loader": dummy_loader}
+    assert _get_loader_from_info(info_dict_valid) is dummy_loader
+
+    # 6. Success case with object context
+    class ValidContext:
+        def __init__(self, loader):
+            self.sqlalchemy_loader = loader
+
+    info_obj_valid = Mock()
+    info_obj_valid.context = ValidContext(dummy_loader)
+    assert _get_loader_from_info(info_obj_valid) is dummy_loader
